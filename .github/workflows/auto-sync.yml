@@ -16,8 +16,8 @@ jobs:
         id: get_token
         uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db
         with:
-          application_id: ${{ secrets.ID_AUTOSYNCBOT }}
-          application_private_key: ${{ secrets.PEM_AUTOSYNCBOT }}
+          application_id: ${{ secrets.ID_AUTOSYNCHROBOT }}
+          application_private_key: ${{ secrets.PEM_AUTOSYNCHROBOT }}
 
       # More info: https://github.com/actions/checkout.
       - name: Checkout & Authentication
