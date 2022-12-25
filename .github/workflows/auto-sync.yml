@@ -29,10 +29,10 @@ jobs:
 
       # More info: https://github.com/rovast/sync-upstream-repo/.
       - name: GitHub Sync to Upstream Repository
-        uses: denis-tingajkin/sync-files@7cf3a71d4530214ecee324faf12cf884a275d366
+        uses: BetaHuhn/repo-file-sync-action@475a6502288f55cc52e951bdd1c44d7981218478
         with:
-          git-author-email: ${{ secrets.AUTOSYNCHRO_CI_EMAIL }}
-          git-author-name: ${{ secrets.AUTOSYNCHRO_CI_NAME }}
-          exclude-files: 'README.md'
-          sync-ignore-file-name: 'README.md'
-          sync-repository: wr-projects/github-template
+          GH_INSTALLATION_TOKEN: ${{ steps.get_token.outputs.token }}
+          CONFIG_PATH: '.github/config/workflows/sync.yml'
+          GIT_EMAIL: ${{ secrets.AUTOSYNCHRO_CI_EMAIL }}
+          GIT_USERNAME: ${{ secrets.AUTOSYNCHRO_CI_NAME }}
+          SKIP_PR: true
