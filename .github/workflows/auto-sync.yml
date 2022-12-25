@@ -33,4 +33,6 @@ jobs:
         with:
           git-author-email: ${{ secrets.AUTOSYNCHRO_CI_EMAIL }}
           git-author-name: ${{ secrets.AUTOSYNCHRO_CI_NAME }}
+          exclude-files: 'README.md'
+          sync-ignore-file-name: 'README.md'
           sync-repository: wr-projects/github-template
