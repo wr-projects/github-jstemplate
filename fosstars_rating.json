@@ -258,7 +258,7 @@
         }
       }
     },
-    "value" : 5.513636115657393,
+    "value" : 5.530821058374251,
     "weight" : 1.0,
     "confidence" : 9.566989916533991,
     "usedValues" : [ {
@@ -1253,7 +1253,7 @@
         "type" : "ProjectActivityScore",
         "name" : "Open-source project activity score"
       },
-      "value" : 7.753846153846155,
+      "value" : 7.915384615384617,
       "weight" : 0.5,
       "confidence" : 10.0,
       "usedValues" : [ {
@@ -1262,7 +1262,7 @@
           "type" : "PositiveIntegerFeature",
           "name" : "Number of commits in the last three months"
         },
-        "number" : 48,
+        "number" : 49,
         "explanation" : [ ]
       }, {
         "type" : "IntegerValue",
@@ -1273,7 +1273,7 @@
         "number" : 2,
         "explanation" : [ ]
       } ],
-      "explanation" : [ "48 commits in the last 3 months results to 7.38 points", "2 contributors increase the score value from 7.38 to 7.75" ],
+      "explanation" : [ "49 commits in the last 3 months results to 7.54 points", "2 contributors increase the score value from 7.54 to 7.92" ],
       "isUnknown" : false,
       "isNotApplicable" : false,
       "feature" : {
