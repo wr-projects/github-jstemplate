@@ -3,7 +3,6 @@ SPDX-FileCopyrightText: 2022 WebReady Projects <https://github.com/wr-projects/>
 
 SPDX-License-Identifier: MIT
 -->
-
 # Pull Request Template - Code Change Control
 
 ## Description
