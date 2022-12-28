@@ -1,0 +1,89 @@
+name: Pipeline - Renovate
+
+on:
+  schedule:
+    - cron: '0/30 * * * *'
+
+jobs:
+
+  e2e:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        configureFile: [./github/config/workflows/renovate-config.js]
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+
+      - name: Use Node.js v${{ matrix.node }}
+        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+          registry-url: https://registry.npmjs.org/
+
+      - name: Build code
+        run: yarn build
+
+      - name: Renovate test
+        uses: ./
+        env:
+          LOG_LEVEL: debug
+        with:
+          configurationFile: ${{ matrix.configurationFile }}
+
+
+  # More info:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        node: [16, 18, 19]
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      # More info: https://github.com/peter-murray/workflow-application-token-action.
+      - name: Get token
+        id: get_token
+        uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db
+        with:
+          application_id: ${{ secrets.ID_RENOVATEBOT }}
+          application_private_key: ${{ secrets.PEM_RENOVATEBOT }}
+
+      # More info: https://github.com/actions/checkout.
+      - name: Checkout & Authentication
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+        with:
+          token: ${{ steps.get_token.outputs.token }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Corepack Enable
+        run: corepack enable
+
+      - name: Use Node.js v16
+        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
+        with:
+          node-version: 16.10.0
+          cache: pnpm
+
+      - name: Renovate
+        uses: renovatebot/github-action@0546b792f88eec7340ea2faf6a6c5e966e1e3ea6
+        with:
+          configurationFile: .github/config/workflows/renovate-config.js
+          token: ${{ steps.get_token.outputs.token }}

@@ -1,0 +1,50 @@
+---
+name: Pipeline - Xanitizer
+
+on:
+  push:
+  schedule:
+    - '0 5 * * *'
+
+jobs:
+  xanitizer_security_analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+
+      - name: Use Node.js v${{ matrix.node }}
+        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install Dependencies
+        run: yarn --frozen-lockfile --immutable
+
+      - name: Xanitizer Security Analysis
+        uses: RIGS-IT/xanitizer-action@
+        with:
+          license: ${{ secrets.XANITIZER_LICENSE }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb
+        with:
+          name: Xanitizer-Reports
+          path: |
+            *-Findings-List.pdf
+            *-Findings-List.sarif
+
+      - name: Upload SARIF File
+        uses: github/codeql-action/upload-sarif@c719ec0b337ad8a0f3336d778d54e0f30df35713
+        with:
+          sarif_file: Xanitizer-Findings-List.sarif
