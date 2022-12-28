@@ -1,0 +1,341 @@
+---
+name: Pipeline - Continuous Integration
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+
+      - name: Add problem matcher
+        run: echo "::add-matcher::.github/problemMatchers/eslint.json"
+
+      - name: Use Node.js v16
+        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
+        with:
+          node-version: 16.10.0
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm lint --fix=false
+
+  # More info: https://github.com/github/super-linter.
+  linter:
+    runs-on: ubuntu-latest
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      # More info: https://github.com/peter-murray/workflow-application-token-action.
+      - name: Get token
+        id: get_token
+        uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db
+        with:
+          application_id: ${{ secrets.ID_LINTERBOT }}
+          application_private_key: ${{ secrets.PEM_LINTERBOT }}
+
+      # More info: https://github.com/actions/checkout.
+      - name: Checkout & Authentication
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+        with:
+          token: ${{ steps.get_token.outputs.token }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Linter
+        uses: github/super-linter@bb2d833b08b6c288608686672b93a8a4589cdc49
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: main
+          DISABLE_ERRORS: false
+          LINTER_RULES_PATH: .github/config/linters
+          CSS_FILE_NAME: .stylelintrc.json
+          EDITORCONFIG_FILE_NAME: .ecrc
+          IGNORE_GITIGNORED_FILES: true
+          JAVASCRIPT_ES_CONFIG_FILE: .eslintrc.js
+          MARKDOWN_CONFIG_FILE: .markdownlint.json
+          GITHUB_TOKEN: ${{ steps.get_token.outputs.token }}
+
+  validation:
+    name: Node Analysis
+    runs-on: ubuntu-latest
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+
+      # More info: https://github.com/marketplace/actions/nodesecure-continuous-integration.
+      - name: Node Analysis
+        uses: NodeSecure/ci-action@177c57fe32c75cafabe87f6e4515d277cc37ae6c
+        with:
+          strategy: sonatype
+          vulnerabilities: medium
+          warnings: off
+          reporters: console
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [16, 18, 19]
+        instance: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+    env:
+      GH_INSTANCE_TOTAL: 10
+
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+
+      - run: pnpm audit --prod
+
+      - run: git status --porcelain
+
+      - run: git diff
+
+      - run: git diff --exit-code
+
+      - name: Use Node.js v${{ matrix.node }}
+        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+        env:
+          GH_INSTANCE_INDEX: ${{ matrix.instance }}
+
+      - name: Store code coverage report
+        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb
+        with:
+          name: coverage
+          path: coverage/
+
+  build:
+    name: Compile source code
+    needs: [test]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [16, 18, 19]
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+
+      - name: Use Node.js v${{ matrix.node }}
+        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm --frozen-lockfile
+
+      - name: Build code
+        run: pnpm build
+
+  docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [16, 18, 19]
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+
+      - name: Corepack Enable
+        run: corepack enable
+
+      - name: Use Node.js v${{ matrix.node }}
+        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm --frozen-lockfile
+
+      - name: Generate Documentation
+        run: pnpm docs
+
+  # More info: https://github.com/orhun/git-cliff-action.
+  generate_changelog:
+    name: Generate Changelog.md
+    runs-on: ubuntu-latest
+    outputs:
+      release_body: ${{ steps.release.outputs.RELEASE_BODY }}
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+        with:
+          fetch-depth: 0
+
+      - name: Run generate Changelog.md
+        id: git-cliff
+        uses: orhun/git-cliff-action@5352ef7a0aedf5b706696bc9c1a5e7fcacdf0ceb
+        with:
+          config: ./github/config/cliff.toml
+          args: -v --latest --strip header
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Set the release body
+        id: release
+        shell: bash
+        run: |
+          # Set the release body
+          r=$(cat ${{ steps.git-cliff.outputs.changelog }})
+
+          # Trim version and date
+          if [ "${{ inputs.trim-version-and-date }}" = "true" ]; then
+            r="$(printf "$r" | tail -n +3)"
+          fi
+
+          # Workaround for https://github.community/t/set-output-truncates-multiline-strings/16852
+          r="${r//'%'/'%25'}"     # Multiline escape sequences for %
+          r="${r//$'\n'/'%0A'}"   # Multiline escape sequences for '\n'
+          r="${r//$'\r'/'%0D'}"   # Multiline escape sequences for '\r'
+
+          echo "::set-output name=RELEASE_BODY::$r"
+
+      - name: Upload the binary releases
+        uses: svenstaro/upload-release-action@133984371c30d34e38222a64855679a414cb7575
+        with:
+          file: binary_release.zip
+          tag: ${{ github.ref }}
+          body: ${{ steps.release.outputs.RELEASE_BODY }}
+
+      - name: Show result
+        run: |
+          echo "$CHANGELOG"
+        env:
+          CHANGELOG: ${{ steps.git-cliff.outputs.changelog }}
+
+  # More info: https://github.com/svenstaro/upload-release-action.
+  upload:
+    name: Upload the release
+    needs: generate_changelog
+    runs-on: ubuntu-latest
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      # More info: https://github.com/peter-murray/workflow-application-token-action.
+      - name: Get token
+        id: get_token
+        uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db
+        with:
+          application_id: ${{ secrets.ID_AUTOUPDATEBOT }}
+          application_private_key: ${{ secrets.PEM_AUTOUPDATEBOT }}
+
+      # More info: https://github.com/actions/checkout.
+      - name: Checkout & Authentication
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+        with:
+          token: ${{ steps.get_token.outputs.token }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Upload the binary release
+        uses: svenstaro/upload-release-actions@133984371c30d34e38222a64855679a414cb7575
+        with:
+          file: binary_release.zip
+          tag: ${{ github.ref }}
+          body: ${{ needs.changelog.outputs.release_body }}
+          repo_token: ${{ steps.get_token.outputs.token }}
+
+  # More info: https://github.com/codecov/codecov-action.
+  upload_coverage_report:
+    name: Upload coverage report to codecov
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Download Coverage report
+        uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+        with:
+          name: coverage
+          path: coverage/
+
+      - name: CodeCOV Upload
+        uses: codecov/codecov-action@d9f34f8cd5cb3b3eb79b3e4b5dae3a16df499a70
+        with:
+          directory: coverage/
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}

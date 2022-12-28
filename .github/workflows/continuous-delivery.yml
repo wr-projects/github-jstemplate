@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022 WebReady Projects <https://github.com/wr-projects/>
+#
+# SPDX-License-Identifier: MIT
 ---
 name: Pipeline - Continuous Delivery
 
@@ -23,7 +26,7 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       # More info: https://github.com/step-security/harden-runner.
       - name: Harden Runner

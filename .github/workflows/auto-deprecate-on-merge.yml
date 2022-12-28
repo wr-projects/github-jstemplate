@@ -1,0 +1,41 @@
+---
+name: Pipeline - NPM Deprecate PR versions On Merge
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  deprecate-on-merge:
+    name: NPM Deprecate PR versions On Merge
+    runs-on: ubuntu-latest
+
+    steps:
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
+        with:
+          egress-policy: audit
+
+      - name: Checkout Project
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+
+      - name: Corepack Enable
+        run: corepack enable
+
+      - name: Use Node.js v16
+        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
+        with:
+          node-version: 16.10.0
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm --frozen-lockfile
+
+      - name: Deprecate versions
+        run: yarn npm-deprecate --name "*pr-${PR_NUMBER}*" -d -v
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          PR_NUMBER: ${{ github.event.number }}
