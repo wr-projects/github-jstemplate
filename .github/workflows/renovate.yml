@@ -2,7 +2,7 @@ name: Pipeline - Renovate
 
 on:
   schedule:
-    - cron: '0/30 * * * *'
+    - cron: '*/5 * * * *'
 
 jobs:
 
@@ -24,18 +24,17 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
 
-      - name: Use Node.js v${{ matrix.node }}
+      - name: Use Node.js v16
         uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
         with:
-          node-version: ${{ matrix.node }}
-          cache: yarn
-          registry-url: https://registry.npmjs.org/
+          node-version: 16.10.0
+          cache: pnpm
 
       - name: Build code
-        run: yarn build
+        run: pnpm build
 
       - name: Renovate test
-        uses: ./
+        uses: renovatebot/github-action@0546b792f88eec7340ea2faf6a6c5e966e1e3ea6
         env:
           LOG_LEVEL: debug
         with:
