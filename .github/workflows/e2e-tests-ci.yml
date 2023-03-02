@@ -1,0 +1,27 @@
+name: Pipeline - E2E Tests Workflow
+
+on:
+  workflow_call:
+
+jobs:
+  e2e:
+    name: End-To-End Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16.x, 17.x, 18.x]
+    steps:
+      - uses: actions/checkout@
+
+      - uses: pnpm/actions-setup@
+
+      - uses: actions/setup-node@
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - run: pnpm jest:e2e
+    

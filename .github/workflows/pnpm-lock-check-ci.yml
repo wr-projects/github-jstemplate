@@ -1,0 +1,43 @@
+name: Pipeline - PNPM.lock file check
+
+on:
+  workflow_call:
+
+jobs:
+  # Make sure that the pnpm lock-file of the PR is not broken
+  lockfile:
+    name: Lock file check
+    runs-on: ubuntu-latest
+    steps:
+
+      # More info: https://github.com/step-security/harden-runner.
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@c8454efe5d0bdefd25384362fe217428ca277d57
+        with:
+          egress-policy: audit
+
+      # More info: https://github.com/peter-murray/workflow-application-token-action.
+      - name: Get token
+        id: get_token
+        uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db
+        with:
+          application_id: ${{ secrets.ID_PRLINTERBOT }}
+          application_private_key: ${{ secrets.PEM_PRLINTERBOT }}
+
+      # More info: https://github.com/actions/checkout.
+      - name: Checkout & Authentication
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+        with:
+          token: ${{ steps.get_token.outputs.token }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: pnpm/actions-setup@
+      
+      - uses: actions/setup-node@
+        with:
+          cache: 'pnpm'
+      - name: Check lock file with PNPM list
+        run: |
+          pnpm list

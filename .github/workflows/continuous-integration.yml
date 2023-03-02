@@ -11,35 +11,8 @@ on:
 
 jobs:
 
-  lint:
-    name: Linting
-    runs-on: ubuntu-latest
-
-    steps:
-      # More info: https://github.com/step-security/harden-runner.
-      - name: Harden Runner
-        id: harden_runner
-        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
-        with:
-          egress-policy: audit
-
-      - name: Checkout Project
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-
-      - name: Add problem matcher
-        run: echo "::add-matcher::.github/problemMatchers/eslint.json"
-
-      - name: Use Node.js v16
-        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
-        with:
-          node-version: 16.10.0
-          cache: pnpm
-
-      - name: Install Dependencies
-        run: pnpm --frozen-lockfile
-
-      - name: Run ESLint
-        run: pnpm lint --fix=false
+  lockfile:
+    uses: wr-projects/github-jstemplate/.github/workflows/pnpm-lock-check-ci.yml@main
 
   # More info: https://github.com/github/super-linter.
   linter:
@@ -111,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [16, 18, 19]
+        node: [16, 17, 18]
         instance: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
     env:
       GH_INSTANCE_TOTAL: 10
@@ -153,164 +126,9 @@ jobs:
           name: coverage
           path: coverage/
 
-  build:
-    name: Compile source code
-    needs: [test]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [16, 18, 19]
-    steps:
-      # More info: https://github.com/step-security/harden-runner.
-      - name: Harden Runner
-        id: harden_runner
-        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
-        with:
-          egress-policy: audit
-
-      - name: Checkout Project
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-
-      - name: Use Node.js v${{ matrix.node }}
-        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
-        with:
-          node-version: ${{ matrix.node }}
-          cache: pnpm
-
-      - name: Install Dependencies
-        run: pnpm --frozen-lockfile
-
-      - name: Build code
-        run: pnpm build
-
-  docs:
-    name: Generate Documentation
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [16, 18, 19]
-    steps:
-      # More info: https://github.com/step-security/harden-runner.
-      - name: Harden Runner
-        id: harden_runner
-        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
-        with:
-          egress-policy: audit
-
-      - name: Checkout Project
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-
-      - name: Corepack Enable
-        run: corepack enable
-
-      - name: Use Node.js v${{ matrix.node }}
-        uses: actions/setup-node@8c91899e586c5b171469028077307d293428b516
-        with:
-          node-version: ${{ matrix.node }}
-          cache: pnpm
-
-      - name: Install Dependencies
-        run: pnpm --frozen-lockfile
-
-      - name: Generate Documentation
-        run: pnpm docs
-
-  # More info: https://github.com/orhun/git-cliff-action.
-  generate_changelog:
-    name: Generate Changelog.md
-    runs-on: ubuntu-latest
-    outputs:
-      release_body: ${{ steps.release.outputs.RELEASE_BODY }}
-    steps:
-      # More info: https://github.com/step-security/harden-runner.
-      - name: Harden Runner
-        id: harden_runner
-        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
-        with:
-          egress-policy: audit
-
-      - name: Checkout Project
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-        with:
-          fetch-depth: 0
-
-      - name: Run generate Changelog.md
-        id: git-cliff
-        uses: orhun/git-cliff-action@5352ef7a0aedf5b706696bc9c1a5e7fcacdf0ceb
-        with:
-          config: ./github/config/cliff.toml
-          args: -v --latest --strip header
-        env:
-          OUTPUT: CHANGELOG.md
-
-      - name: Set the release body
-        id: release
-        shell: bash
-        run: |
-          # Set the release body
-          r=$(cat ${{ steps.git-cliff.outputs.changelog }})
-
-          # Trim version and date
-          if [ "${{ inputs.trim-version-and-date }}" = "true" ]; then
-            r="$(printf "$r" | tail -n +3)"
-          fi
-
-          # Workaround for https://github.community/t/set-output-truncates-multiline-strings/16852
-          r="${r//'%'/'%25'}"     # Multiline escape sequences for %
-          r="${r//$'\n'/'%0A'}"   # Multiline escape sequences for '\n'
-          r="${r//$'\r'/'%0D'}"   # Multiline escape sequences for '\r'
-
-          echo "::set-output name=RELEASE_BODY::$r"
-
-      - name: Upload the binary releases
-        uses: svenstaro/upload-release-action@133984371c30d34e38222a64855679a414cb7575
-        with:
-          file: binary_release.zip
-          tag: ${{ github.ref }}
-          body: ${{ steps.release.outputs.RELEASE_BODY }}
-
-      - name: Show result
-        run: |
-          echo "$CHANGELOG"
-        env:
-          CHANGELOG: ${{ steps.git-cliff.outputs.changelog }}
-
-  # More info: https://github.com/svenstaro/upload-release-action.
-  upload:
-    name: Upload the release
-    needs: generate_changelog
-    runs-on: ubuntu-latest
-    steps:
-      # More info: https://github.com/step-security/harden-runner.
-      - name: Harden Runner
-        id: harden_runner
-        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
-        with:
-          egress-policy: audit
-
-      # More info: https://github.com/peter-murray/workflow-application-token-action.
-      - name: Get token
-        id: get_token
-        uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db
-        with:
-          application_id: ${{ secrets.ID_AUTOUPDATEBOT }}
-          application_private_key: ${{ secrets.PEM_AUTOUPDATEBOT }}
-
-      # More info: https://github.com/actions/checkout.
-      - name: Checkout & Authentication
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-        with:
-          token: ${{ steps.get_token.outputs.token }}
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Upload the binary release
-        uses: svenstaro/upload-release-actions@133984371c30d34e38222a64855679a414cb7575
-        with:
-          file: binary_release.zip
-          tag: ${{ github.ref }}
-          body: ${{ needs.changelog.outputs.release_body }}
-          repo_token: ${{ steps.get_token.outputs.token }}
+  #
+  e2e:
+    uses:
 
   # More info: https://github.com/codecov/codecov-action.
   upload_coverage_report:
