@@ -1,10 +1,21 @@
 {
   "name": "github-jstemplate",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
-  "main": "index.js",
   "scripts": {
+    "clean": "pnpm --parallel --stream clean",
+    "lint": "eslint --ext .cjs,.js,.ts,.vue .",
+    "release": "pnpm release:check && pnpm release:version && pnpm release:publish",
+    "release:check": "pnpm lint && pnpm clean",
+    "release:changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
+    "release:publish": "pnpm -r publish --tag next",
+    "release:version": "bumpp package.json packages/*/package.json --execute=\"pnpm release:changelog\" --commit \"build: publish v%s\" --all",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "lint-staged": {
+    "*.{cjs,js,ts,vue}": "eslint --fix",
+    "*.{json,yml,css,scss}": "prettier --write",
+    "package.json": "sort-package.json"
   },
   "keywords": [],
   "author": "",
