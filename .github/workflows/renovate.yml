@@ -34,7 +34,7 @@ jobs:
         run: pnpm build
 
       - name: Renovate test
-        uses: renovatebot/github-action@0546b792f88eec7340ea2faf6a6c5e966e1e3ea6
+        uses: renovatebot/github-action@230ce922b08968d0a4f6f70f295601daff09ef1d
         env:
           LOG_LEVEL: debug
         with:
@@ -82,7 +82,7 @@ jobs:
           cache: pnpm
 
       - name: Renovate
-        uses: renovatebot/github-action@0546b792f88eec7340ea2faf6a6c5e966e1e3ea6
+        uses: renovatebot/github-action@230ce922b08968d0a4f6f70f295601daff09ef1d
         with:
           configurationFile: .github/config/workflows/renovate-config.js
           token: ${{ steps.get_token.outputs.token }}
